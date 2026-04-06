@@ -6,7 +6,6 @@ export default function Navbar({ setSeccion, logout, setBusqueda }) {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  /* ================= BUSCADOR ================= */
 
   const handleBuscar = (e)=>{
     const valor = e.target.value;
@@ -17,7 +16,6 @@ export default function Navbar({ setSeccion, logout, setBusqueda }) {
     }
   };
 
-  /* ================= UI ================= */
 
   return(
     <nav className="navbar-modern">

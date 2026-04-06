@@ -1,13 +1,11 @@
 import jsPDF from "jspdf";
 
-export default function BookCard({ libro, agregarFavorito, esFav }) {
+export default function BookCard({ libro, agregarFavorito, esFav, eliminarFavorito }) {
 
   const portada = libro.portada 
     || `https://picsum.photos/seed/${encodeURIComponent(libro.titulo)}/200/300`;
 
-
   const descargarFicha = () => {
-
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     const pdf = new jsPDF();
@@ -16,7 +14,6 @@ export default function BookCard({ libro, agregarFavorito, esFav }) {
     pdf.text("📚 Ficha Bibliográfica", 10, 10);
 
     pdf.setFontSize(12);
-
     pdf.text(`Usuario: ${user.email || "No identificado"}`, 10, 30);
     pdf.text(`Libro: ${libro.titulo}`, 10, 40);
     pdf.text(`Autor: ${libro.autor}`, 10, 50);
@@ -37,28 +34,24 @@ export default function BookCard({ libro, agregarFavorito, esFav }) {
 
       <div className="botones">
 
-        <button 
-          className="fav"
-          onClick={() => agregarFavorito(libro)}
-          disabled={esFav}
-        >
-          {esFav ? "✔ Guardado" : "❤️ Favorito"}
-        </button>
+        {!esFav && (
+          <button onClick={() => agregarFavorito(libro)}>
+            ❤️ Favorito
+          </button>
+        )}
 
-        <button className="descargar" onClick={descargarFicha}>
-          📥 Descargar ficha
+        {esFav && eliminarFavorito && (
+          <button onClick={() => eliminarFavorito(libro.id)}>
+            ❌ Quitar
+          </button>
+        )}
+
+        <button onClick={descargarFicha}>
+          📥 Descargar
         </button>
 
       </div>
 
     </div>
   );
-  {eliminarFavorito && (
-  <button 
-    className="fav"
-    onClick={()=>eliminarFavorito(libro.id)}
-  >
-    ❌ Quitar
-  </button>
-)}
 }

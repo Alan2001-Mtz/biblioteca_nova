@@ -24,27 +24,14 @@ export default function Dashboard(){
   const [busqueda,setBusqueda] = useState("");
 
   useEffect(()=>{
-    document.body.style.backgroundImage =
-      "url('https://images.unsplash.com/photo-1523634141350-ad6147665339?q=80&w=873&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')";
-
     cargarLibros();
-    if(usuario.uid) cargarFavoritos();
+    if(usuario && usuario.uid) cargarFavoritos();
   },[]);
-
-  /* ================= LIBROS ================= */
 
   const cargarLibros = async ()=>{
     const snapshot = await getDocs(collection(db,"libros"));
-
-    setLibros(
-      snapshot.docs.map(doc=>({
-        id:doc.id,
-        ...doc.data()
-      }))
-    );
+    setLibros(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
   };
-
-  /* ================= FAVORITOS ================= */
 
   const cargarFavoritos = async ()=>{
     const q = query(
@@ -53,24 +40,10 @@ export default function Dashboard(){
     );
 
     const snapshot = await getDocs(q);
-
-    setFavoritos(
-      snapshot.docs.map(doc=>({
-        id:doc.id,
-        ...doc.data()
-      }))
-    );
+    setFavoritos(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
   };
 
   const agregarFavorito = async (libro)=>{
-
-    const existe = favoritos.some(f=>f.libroId === libro.id);
-
-    if(existe){
-      alert("Ya está en favoritos");
-      return;
-    }
-
     await addDoc(collection(db,"favoritos"),{
       userId:usuario.uid,
       libroId:libro.id,
@@ -85,26 +58,19 @@ export default function Dashboard(){
     cargarFavoritos();
   };
 
-  /* ================= BUSCADOR ================= */
-
   const librosFiltrados = libros.filter(l =>
     (l.titulo || "").toLowerCase().includes(busqueda) ||
     (l.autor || "").toLowerCase().includes(busqueda)
   );
-
-  /* ================= LOGOUT ================= */
 
   const logout = ()=>{
     localStorage.removeItem("user");
     window.location="/";
   };
 
-  /* ================= UI ================= */
-
   return(
     <div>
 
-      {/* 🔥 NAVBAR */}
       <Navbar 
         setSeccion={setSeccion}
         logout={logout}
@@ -117,42 +83,24 @@ export default function Dashboard(){
           {seccion === "libros" ? "📚 Biblioteca" : "❤️ Favoritos"}
         </h2>
 
-        {/* 🔥 LIBROS */}
-        {seccion === "libros" && (
-          <div className="grid">
+        <div className="grid">
 
-            {librosFiltrados.map(libro=>{
-              const esFav = favoritos.some(f=>f.libroId === libro.id);
+          {(seccion === "libros" ? librosFiltrados : favoritos).map(libro=>{
 
-              return(
-                <BookCard
-                  key={libro.id}
-                  libro={libro}
-                  agregarFavorito={agregarFavorito}
-                  esFav={esFav}
-                />
-              );
-            })}
+            const esFav = favoritos.some(f=>f.libroId === libro.id);
 
-          </div>
-        )}
-
-        {/* 🔥 FAVORITOS */}
-        {seccion === "favoritos" && (
-          <div className="grid">
-
-            {favoritos.map(fav=>(
+            return(
               <BookCard
-                key={fav.id}
-                libro={fav}
-                agregarFavorito={()=>{}}
-                esFav={true}
+                key={libro.id}
+                libro={libro}
+                agregarFavorito={agregarFavorito}
                 eliminarFavorito={eliminarFavorito}
+                esFav={seccion === "favoritos"}
               />
-            ))}
+            );
+          })}
 
-          </div>
-        )}
+        </div>
 
       </div>
 
