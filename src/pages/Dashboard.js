@@ -58,15 +58,15 @@ export default function Dashboard(){
     cargarFavoritos();
   };
 
-  const librosFiltrados = libros.filter(l =>
-    (l.titulo || "").toLowerCase().includes(busqueda) ||
-    (l.autor || "").toLowerCase().includes(busqueda)
-  );
-
   const logout = ()=>{
     localStorage.removeItem("user");
     window.location="/";
   };
+
+  const librosFiltrados = libros.filter(l =>
+    (l.titulo || "").toLowerCase().includes(busqueda) ||
+    (l.autor || "").toLowerCase().includes(busqueda)
+  );
 
   return(
     <div>
@@ -80,14 +80,12 @@ export default function Dashboard(){
       <div className="contenido">
 
         <h2>
-          {seccion === "libros" ? "📚 Biblioteca" : "❤️ Favoritos"}
+          {seccion === "libros" ? "📚 Libros" : "❤️ Favoritos"}
         </h2>
 
         <div className="grid">
 
           {(seccion === "libros" ? librosFiltrados : favoritos).map(libro=>{
-
-            const esFav = favoritos.some(f=>f.libroId === libro.id);
 
             return(
               <BookCard

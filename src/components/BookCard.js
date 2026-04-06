@@ -1,57 +1,104 @@
-import jsPDF from "jspdf";
+import { useEffect, useState } from "react";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  doc,
+  query,
+  where
+} from "firebase/firestore";
 
-export default function BookCard({ libro, agregarFavorito, esFav, eliminarFavorito }) {
+import { db } from "../firebase";
+import BookCard from "../components/BookCard";
+import Navbar from "../components/Navbar";
 
-  const portada = libro.portada 
-    || `https://picsum.photos/seed/${encodeURIComponent(libro.titulo)}/200/300`;
+export default function Dashboard(){
 
-  const descargarFicha = () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const usuario = JSON.parse(localStorage.getItem("user") || "{}");
 
-    const pdf = new jsPDF();
+  const [libros,setLibros] = useState([]);
+  const [favoritos,setFavoritos] = useState([]);
 
-    pdf.setFontSize(16);
-    pdf.text("📚 Ficha Bibliográfica", 10, 10);
+  const [seccion,setSeccion] = useState("libros");
+  const [busqueda,setBusqueda] = useState("");
 
-    pdf.setFontSize(12);
-    pdf.text(`Usuario: ${user.email || "No identificado"}`, 10, 30);
-    pdf.text(`Libro: ${libro.titulo}`, 10, 40);
-    pdf.text(`Autor: ${libro.autor}`, 10, 50);
-    pdf.text(`Clasificación: ${libro.clasificacion}`, 10, 60);
-    pdf.text(`Fecha: ${new Date().toLocaleDateString()}`, 10, 70);
+  useEffect(()=>{
+    cargarLibros();
+    if(usuario && usuario.uid) cargarFavoritos();
+  },[]);
 
-    pdf.save(`${libro.titulo}.pdf`);
+  const cargarLibros = async ()=>{
+    const snapshot = await getDocs(collection(db,"libros"));
+    setLibros(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
   };
 
-  return (
-    <div className="card">
+  const cargarFavoritos = async ()=>{
+    const q = query(
+      collection(db,"favoritos"),
+      where("userId","==",usuario.uid)
+    );
 
-      <img src={portada} alt={libro.titulo} />
+    const snapshot = await getDocs(q);
+    setFavoritos(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
+  };
 
-      <h3>{libro.titulo || "Sin título"}</h3>
-      <p><b>Autor:</b> {libro.autor || "Desconocido"}</p>
-      <p><b>Clasificación:</b> {libro.clasificacion || "General"}</p>
+  const agregarFavorito = async (libro)=>{
+    await addDoc(collection(db,"favoritos"),{
+      userId:usuario.uid,
+      libroId:libro.id,
+      ...libro
+    });
 
-      <div className="botones">
+    cargarFavoritos();
+  };
 
-        {/* AGREGAR FAVORITO */}
-        {!esFav && (
-          <button onClick={() => agregarFavorito(libro)}>
-            ❤️ Favorito
-          </button>
-        )}
+  const eliminarFavorito = async (id)=>{
+    await deleteDoc(doc(db,"favoritos",id));
+    cargarFavoritos();
+  };
 
-        {/* ELIMINAR FAVORITO */}
-        {esFav && eliminarFavorito && (
-          <button onClick={() => eliminarFavorito(libro.id)}>
-            ❌ Quitar
-          </button>
-        )}
+  const logout = ()=>{
+    localStorage.removeItem("user");
+    window.location="/";
+  };
 
-        {/* DESCARGAR */}
-        <button onClick={descargarFicha}>
-          📥 Descargar
-        </button>
+  const librosFiltrados = libros.filter(l =>
+    (l.titulo || "").toLowerCase().includes(busqueda) ||
+    (l.autor || "").toLowerCase().includes(busqueda)
+  );
+
+  return(
+    <div>
+
+      <Navbar 
+        setSeccion={setSeccion}
+        logout={logout}
+        setBusqueda={setBusqueda}
+      />
+
+      <div className="contenido">
+
+        <h2>
+          {seccion === "libros" ? "📚 Libros" : "❤️ Favoritos"}
+        </h2>
+
+        <div className="grid">
+
+          {(seccion === "libros" ? librosFiltrados : favoritos).map(libro=>{
+
+            return(
+              <BookCard
+                key={libro.id}
+                libro={libro}
+                agregarFavorito={agregarFavorito}
+                eliminarFavorito={eliminarFavorito}
+                esFav={seccion === "favoritos"}
+              />
+            );
+          })}
+
+        </div>
 
       </div>
 
