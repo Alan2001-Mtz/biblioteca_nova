@@ -34,18 +34,21 @@ export default function BookCard({ libro, agregarFavorito, esFav, eliminarFavori
 
       <div className="botones">
 
+        {/* AGREGAR FAVORITO */}
         {!esFav && (
           <button onClick={() => agregarFavorito(libro)}>
             ❤️ Favorito
           </button>
         )}
 
+        {/* ELIMINAR FAVORITO */}
         {esFav && eliminarFavorito && (
           <button onClick={() => eliminarFavorito(libro.id)}>
             ❌ Quitar
           </button>
         )}
 
+        {/* DESCARGAR */}
         <button onClick={descargarFicha}>
           📥 Descargar
         </button>
