@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen } from "@testing-library/react";
+import App from "./App";
 
-test('renderiza login', () => {
+test("renderiza login", () => {
   render(<App />);
-  expect(screen.getByText(/login/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /login/i })).toBeInTheDocument();
 });

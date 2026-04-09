@@ -1,107 +1,68 @@
-import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  doc,
-  query,
-  where
-} from "firebase/firestore";
+import jsPDF from "jspdf";
 
-import { db } from "../firebase";
-import BookCard from "../components/BookCard";
-import Navbar from "../components/Navbar";
+export default function BookCard({
+  libro,
+  agregarFavorito,
+  esFav = false,
+  eliminarFavorito
+}) {
+  const titulo = libro?.titulo || "Sin titulo";
+  const autor = libro?.autor || "Desconocido";
+  const clasificacion = libro?.clasificacion || "General";
+  const portada =
+    libro?.portada ||
+    `https://picsum.photos/seed/${encodeURIComponent(titulo)}/200/300`;
 
-export default function Dashboard(){
+  const descargarFicha = () => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const pdf = new jsPDF();
 
-  const usuario = JSON.parse(localStorage.getItem("user") || "{}");
+    pdf.setFontSize(16);
+    pdf.text("Ficha Bibliografica", 10, 15);
 
-  const [libros,setLibros] = useState([]);
-  const [favoritos,setFavoritos] = useState([]);
+    pdf.setFontSize(12);
+    pdf.text(`Usuario: ${user.email || "No identificado"}`, 10, 30);
+    pdf.text(`Libro: ${titulo}`, 10, 40);
+    pdf.text(`Autor: ${autor}`, 10, 50);
+    pdf.text(`Clasificacion: ${clasificacion}`, 10, 60);
+    pdf.text(`Fecha: ${new Date().toLocaleDateString()}`, 10, 70);
 
-  const [seccion,setSeccion] = useState("libros");
-  const [busqueda,setBusqueda] = useState("");
-
-  useEffect(()=>{
-    cargarLibros();
-    if(usuario && usuario.uid) cargarFavoritos();
-  },[]);
-
-  const cargarLibros = async ()=>{
-    const snapshot = await getDocs(collection(db,"libros"));
-    setLibros(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
+    pdf.save(`${titulo}.pdf`);
   };
 
-  const cargarFavoritos = async ()=>{
-    const q = query(
-      collection(db,"favoritos"),
-      where("userId","==",usuario.uid)
-    );
+  return (
+    <div className="card">
+      <img src={portada} alt={titulo} />
 
-    const snapshot = await getDocs(q);
-    setFavoritos(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
-  };
+      <h3>{titulo}</h3>
+      <p>
+        <b>Autor:</b> {autor}
+      </p>
+      <p>
+        <b>Clasificacion:</b> {clasificacion}
+      </p>
 
-  const agregarFavorito = async (libro)=>{
-    await addDoc(collection(db,"favoritos"),{
-      userId:usuario.uid,
-      libroId:libro.id,
-      ...libro
-    });
+      <div className="botones">
+        {!esFav && typeof agregarFavorito === "function" && (
+          <button type="button" className="fav" onClick={() => agregarFavorito(libro)}>
+            Favorito
+          </button>
+        )}
 
-    cargarFavoritos();
-  };
+        {esFav && typeof eliminarFavorito === "function" && (
+          <button
+            type="button"
+            className="fav"
+            onClick={() => eliminarFavorito(libro.id)}
+          >
+            Quitar
+          </button>
+        )}
 
-  const eliminarFavorito = async (id)=>{
-    await deleteDoc(doc(db,"favoritos",id));
-    cargarFavoritos();
-  };
-
-  const logout = ()=>{
-    localStorage.removeItem("user");
-    window.location="/";
-  };
-
-  const librosFiltrados = libros.filter(l =>
-    (l.titulo || "").toLowerCase().includes(busqueda) ||
-    (l.autor || "").toLowerCase().includes(busqueda)
-  );
-
-  return(
-    <div>
-
-      <Navbar 
-        setSeccion={setSeccion}
-        logout={logout}
-        setBusqueda={setBusqueda}
-      />
-
-      <div className="contenido">
-
-        <h2>
-          {seccion === "libros" ? "📚 Libros" : "❤️ Favoritos"}
-        </h2>
-
-        <div className="grid">
-
-          {(seccion === "libros" ? librosFiltrados : favoritos).map(libro=>{
-
-            return(
-              <BookCard
-                key={libro.id}
-                libro={libro}
-                agregarFavorito={agregarFavorito}
-                eliminarFavorito={eliminarFavorito}
-                esFav={seccion === "favoritos"}
-              />
-            );
-          })}
-
-        </div>
-
+        <button type="button" className="descargar" onClick={descargarFicha}>
+          Descargar
+        </button>
       </div>
-
     </div>
   );
 }

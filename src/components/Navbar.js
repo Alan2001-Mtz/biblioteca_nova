@@ -1,38 +1,43 @@
 import { useState } from "react";
 
 export default function Navbar({ setSeccion, logout, setBusqueda }) {
-
-  const [input,setInput] = useState("");
+  const [input, setInput] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const handleBuscar = (e)=>{
-    const valor = e.target.value;
+  const handleBuscar = (event) => {
+    const valor = event.target.value;
     setInput(valor);
-    setBusqueda(valor.toLowerCase());
+    setBusqueda(valor);
   };
 
-  return(
+  return (
     <nav className="navbar-modern">
+      <div className="logo">Biblioteca Nova</div>
 
-      <div className="logo">📚 Biblioteca Nova</div>
-
-      <input
-        type="text"
-        placeholder="🔍 Buscar libro..."
-        value={input}
-        onChange={handleBuscar}
-      />
-
-      <div>
-        <button onClick={()=>setSeccion("libros")}>📖</button>
-        <button onClick={()=>setSeccion("favoritos")}>❤️</button>
+      <div className="buscador-navbar">
+        <input
+          type="text"
+          placeholder="Buscar libro..."
+          value={input}
+          onChange={handleBuscar}
+        />
       </div>
 
-      <div>
-        <span>{user.email || "Usuario"}</span>
-        <button onClick={logout}>Salir</button>
+      <div className="menu-links">
+        <button type="button" onClick={() => setSeccion("libros")}>
+          Libros
+        </button>
+        <button type="button" onClick={() => setSeccion("favoritos")}>
+          Favoritos
+        </button>
       </div>
 
+      <div className="user-section">
+        <span className="user-email">{user.email || "Usuario"}</span>
+        <button type="button" className="logout" onClick={logout}>
+          Salir
+        </button>
+      </div>
     </nav>
   );
 }

@@ -1,107 +1,144 @@
 import { useEffect, useState } from "react";
 import {
-  collection,
-  getDocs,
   addDoc,
+  collection,
   deleteDoc,
   doc,
+  getDocs,
   query,
   where
 } from "firebase/firestore";
 
-import { db } from "../firebase";
 import BookCard from "../components/BookCard";
 import Navbar from "../components/Navbar";
+import { db } from "../firebase";
 
-export default function Dashboard(){
-
+export default function Dashboard() {
   const usuario = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const [libros,setLibros] = useState([]);
-  const [favoritos,setFavoritos] = useState([]);
+  const [libros, setLibros] = useState([]);
+  const [favoritos, setFavoritos] = useState([]);
+  const [seccion, setSeccion] = useState("libros");
+  const [busqueda, setBusqueda] = useState("");
 
-  const [seccion,setSeccion] = useState("libros");
-  const [busqueda,setBusqueda] = useState("");
-
-  useEffect(()=>{
+  useEffect(() => {
     cargarLibros();
-    if(usuario && usuario.uid) cargarFavoritos();
-  },[]);
 
-  const cargarLibros = async ()=>{
-    const snapshot = await getDocs(collection(db,"libros"));
-    setLibros(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
+    if (usuario?.uid) {
+      cargarFavoritos();
+    }
+  }, []);
+
+  const cargarLibros = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "libros"));
+      setLibros(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+    } catch (error) {
+      console.error("Error al cargar libros:", error);
+    }
   };
 
-  const cargarFavoritos = async ()=>{
-    const q = query(
-      collection(db,"favoritos"),
-      where("userId","==",usuario.uid)
-    );
+  const cargarFavoritos = async () => {
+    if (!usuario?.uid) {
+      setFavoritos([]);
+      return;
+    }
 
-    const snapshot = await getDocs(q);
-    setFavoritos(snapshot.docs.map(doc=>({ id:doc.id,...doc.data() })));
+    try {
+      const favoritosQuery = query(
+        collection(db, "favoritos"),
+        where("userId", "==", usuario.uid)
+      );
+
+      const snapshot = await getDocs(favoritosQuery);
+      setFavoritos(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+    } catch (error) {
+      console.error("Error al cargar favoritos:", error);
+    }
   };
 
-  const agregarFavorito = async (libro)=>{
-    await addDoc(collection(db,"favoritos"),{
-      userId:usuario.uid,
-      libroId:libro.id,
-      ...libro
-    });
+  const agregarFavorito = async (libro) => {
+    if (!usuario?.uid || !libro?.id) {
+      return;
+    }
 
-    cargarFavoritos();
+    const yaExiste = favoritos.some((favorito) => favorito.libroId === libro.id);
+    if (yaExiste) {
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "favoritos"), {
+        userId: usuario.uid,
+        libroId: libro.id,
+        titulo: libro.titulo || "",
+        autor: libro.autor || "",
+        clasificacion: libro.clasificacion || "",
+        portada: libro.portada || ""
+      });
+
+      await cargarFavoritos();
+    } catch (error) {
+      console.error("Error al agregar favorito:", error);
+    }
   };
 
-  const eliminarFavorito = async (id)=>{
-    await deleteDoc(doc(db,"favoritos",id));
-    cargarFavoritos();
+  const eliminarFavorito = async (id) => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "favoritos", id));
+      await cargarFavoritos();
+    } catch (error) {
+      console.error("Error al eliminar favorito:", error);
+    }
   };
 
-  const logout = ()=>{
+  const logout = () => {
     localStorage.removeItem("user");
-    window.location="/";
+    window.location = "/";
   };
 
-  const librosFiltrados = libros.filter(l =>
-    (l.titulo || "").toLowerCase().includes(busqueda) ||
-    (l.autor || "").toLowerCase().includes(busqueda)
-  );
+  const terminoBusqueda = busqueda.trim().toLowerCase();
+  const librosFiltrados = libros.filter((libro) => {
+    const titulo = (libro.titulo || "").toLowerCase();
+    const autor = (libro.autor || "").toLowerCase();
+    const clasificacion = (libro.clasificacion || "").toLowerCase();
 
-  return(
+    return (
+      titulo.includes(terminoBusqueda) ||
+      autor.includes(terminoBusqueda) ||
+      clasificacion.includes(terminoBusqueda)
+    );
+  });
+
+  const itemsAMostrar = seccion === "libros" ? librosFiltrados : favoritos;
+
+  return (
     <div>
-
-      <Navbar 
+      <Navbar
         setSeccion={setSeccion}
         logout={logout}
         setBusqueda={setBusqueda}
       />
 
       <div className="contenido">
-
-        <h2>
-          {seccion === "libros" ? "📚 Libros" : "❤️ Favoritos"}
-        </h2>
+        <h2>{seccion === "libros" ? "Libros" : "Favoritos"}</h2>
 
         <div className="grid">
-
-          {(seccion === "libros" ? librosFiltrados : favoritos).map(libro=>{
-
-            return(
-              <BookCard
-                key={libro.id}
-                libro={libro}
-                agregarFavorito={agregarFavorito}
-                eliminarFavorito={eliminarFavorito}
-                esFav={seccion === "favoritos"}
-              />
-            );
-          })}
-
+          {itemsAMostrar.map((libro) => (
+            <BookCard
+              key={libro.id}
+              libro={libro}
+              agregarFavorito={agregarFavorito}
+              eliminarFavorito={eliminarFavorito}
+              esFav={seccion === "favoritos"}
+            />
+          ))}
         </div>
-
       </div>
-
     </div>
   );
 }
