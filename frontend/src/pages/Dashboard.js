@@ -10,6 +10,8 @@ import {
 } from "firebase/firestore";
 
 import BookCard from "../components/BookCard";
+import EmptyState from "../components/EmptyState";
+import Loader from "../components/Loader";
 import Navbar from "../components/Navbar";
 import { db } from "../firebase";
 
@@ -20,14 +22,23 @@ export default function Dashboard() {
   const [favoritos, setFavoritos] = useState([]);
   const [seccion, setSeccion] = useState("libros");
   const [busqueda, setBusqueda] = useState("");
+  const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    cargarLibros();
-
-    if (usuario?.uid) {
-      cargarFavoritos();
+    if (!usuario?.uid) {
+      window.location = "/";
+      return;
     }
+
+    cargarDatosIniciales();
   }, []);
+
+  const cargarDatosIniciales = async () => {
+    setCargando(true);
+    await Promise.all([cargarLibros(), cargarFavoritos()]);
+    setCargando(false);
+  };
 
   const cargarLibros = async () => {
     try {
@@ -64,6 +75,7 @@ export default function Dashboard() {
 
     const yaExiste = favoritos.some((favorito) => favorito.libroId === libro.id);
     if (yaExiste) {
+      setMensaje("Este libro ya se encuentra en tus favoritos");
       return;
     }
 
@@ -78,8 +90,10 @@ export default function Dashboard() {
       });
 
       await cargarFavoritos();
+      setMensaje("Libro agregado a favoritos");
     } catch (error) {
       console.error("Error al agregar favorito:", error);
+      setMensaje("No se pudo agregar el libro a favoritos");
     }
   };
 
@@ -91,8 +105,10 @@ export default function Dashboard() {
     try {
       await deleteDoc(doc(db, "favoritos", id));
       await cargarFavoritos();
+      setMensaje("Libro eliminado de favoritos");
     } catch (error) {
       console.error("Error al eliminar favorito:", error);
+      setMensaje("No se pudo eliminar el favorito");
     }
   };
 
@@ -115,6 +131,10 @@ export default function Dashboard() {
   });
 
   const itemsAMostrar = seccion === "libros" ? librosFiltrados : favoritos;
+  const mensajeVacio =
+    seccion === "favoritos"
+      ? "Aun no has agregado libros a favoritos"
+      : "No se encontraron libros";
 
   return (
     <div>
@@ -126,18 +146,25 @@ export default function Dashboard() {
 
       <div className="contenido">
         <h2>{seccion === "libros" ? "Libros" : "Favoritos"}</h2>
+        {mensaje && <p className="success">{mensaje}</p>}
 
-        <div className="grid">
-          {itemsAMostrar.map((libro) => (
-            <BookCard
-              key={libro.id}
-              libro={libro}
-              agregarFavorito={agregarFavorito}
-              eliminarFavorito={eliminarFavorito}
-              esFav={seccion === "favoritos"}
-            />
-          ))}
-        </div>
+        {cargando ? (
+          <Loader />
+        ) : itemsAMostrar.length === 0 ? (
+          <EmptyState mensaje={mensajeVacio} />
+        ) : (
+          <div className="grid">
+            {itemsAMostrar.map((libro) => (
+              <BookCard
+                key={libro.id}
+                libro={libro}
+                agregarFavorito={agregarFavorito}
+                eliminarFavorito={eliminarFavorito}
+                esFav={seccion === "favoritos"}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

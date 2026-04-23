@@ -6,6 +6,8 @@ import {
 import { auth } from "../firebase";
 import { Link } from "react-router-dom";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
 export default function Login(){
 
   const [correo,setCorreo] = useState("");
@@ -21,13 +23,25 @@ export default function Login(){
 
 
   const validar = () => {
-    if(!correo.includes("@")){
-      setError("Correo inválido");
+    const correoNormalizado = correo.trim().toLowerCase();
+
+    if(!EMAIL_REGEX.test(correoNormalizado)){
+      setError("Ingresa un correo valido");
       return false;
     }
 
-    if(password.length < 6){
-      setError("La contraseña debe tener al menos 6 caracteres");
+    if(correoNormalizado.endsWith(".cpm")){
+      setError("La extension del correo no es valida");
+      return false;
+    }
+
+    if(password !== password.trim()){
+      setError("La contraseña no debe tener espacios al inicio o al final");
+      return false;
+    }
+
+    if(password.length < 8){
+      setError("La contraseña debe tener al menos 8 caracteres");
       return false;
     }
 
@@ -43,11 +57,15 @@ export default function Login(){
     if(!validar()) return;
 
     try{
-      const user = await signInWithEmailAndPassword(auth,correo,password);
+      const user = await signInWithEmailAndPassword(
+        auth,
+        correo.trim().toLowerCase(),
+        password
+      );
 
       localStorage.setItem("user",JSON.stringify(user.user));
 
-      setSuccess("Login exitoso ");
+      setSuccess("Login exitoso");
 
       setTimeout(()=>{
         window.location="/dashboard";
@@ -69,8 +87,8 @@ export default function Login(){
     }
 
     try{
-      await sendPasswordResetEmail(auth,correo);
-      setSuccess(" Correo de recuperación enviado");
+      await sendPasswordResetEmail(auth,correo.trim().toLowerCase());
+      setSuccess("Si el correo existe, recibiras instrucciones para recuperar tu contraseña");
     }catch(err){
       manejarError(err.code);
     }
@@ -80,16 +98,19 @@ export default function Login(){
   const manejarError = (code)=>{
     switch(code){
       case "auth/user-not-found":
-        setError("Usuario no registrado");
+        setSuccess("Si el correo existe, recibiras instrucciones para recuperar tu contraseña");
         break;
       case "auth/wrong-password":
         setError("Contraseña incorrecta");
         break;
       case "auth/invalid-email":
-        setError("Correo inválido");
+        setError("Correo invalido");
+        break;
+      case "auth/too-many-requests":
+        setError("Hay demasiados intentos. Intenta de nuevo mas tarde");
         break;
       default:
-        setError("Error inesperado");
+        setError("Ocurrio un error al procesar la solicitud");
     }
   };
 
@@ -105,9 +126,11 @@ export default function Login(){
 
         <form onSubmit={login}>
           <input
+            type="email"
             placeholder="Correo"
             value={correo}
             onChange={e=>setCorreo(e.target.value)}
+            autoComplete="email"
           />
 
           <input
@@ -115,6 +138,7 @@ export default function Login(){
             placeholder="Contraseña"
             value={password}
             onChange={e=>setPassword(e.target.value)}
+            autoComplete="current-password"
           />
 
           <button>Ingresar</button>

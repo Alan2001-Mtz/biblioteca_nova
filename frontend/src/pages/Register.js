@@ -3,6 +3,9 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { Link } from "react-router-dom";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[^\s]{8,20}$/;
+
 export default function Register(){
 
   const [correo,setCorreo] = useState("");
@@ -19,14 +22,30 @@ export default function Register(){
 
 
   const validar = ()=>{
+    const correoNormalizado = correo.trim().toLowerCase();
 
-    if(!correo.includes("@")){
-      setError("Correo inválido");
+    if(!EMAIL_REGEX.test(correoNormalizado)){
+      setError("Ingresa un correo valido con formato correcto");
       return false;
     }
 
-    if(password.length < 6){
-      setError("Mínimo 6 caracteres");
+    if(correoNormalizado.endsWith(".cpm")){
+      setError("La extension del correo no es valida");
+      return false;
+    }
+
+    if(password !== password.trim() || confirm !== confirm.trim()){
+      setError("La contraseña no debe tener espacios al inicio o al final");
+      return false;
+    }
+
+    if(password.includes("\n") || password.includes("\r")){
+      setError("La contraseña no puede contener saltos de linea");
+      return false;
+    }
+
+    if(!PASSWORD_REGEX.test(password)){
+      setError("La contraseña debe tener entre 8 y 20 caracteres, incluir letras y numeros, y no usar espacios");
       return false;
     }
 
@@ -47,9 +66,9 @@ export default function Register(){
     if(!validar()) return;
 
     try{
-      await createUserWithEmailAndPassword(auth,correo,password);
+      await createUserWithEmailAndPassword(auth,correo.trim().toLowerCase(),password);
 
-      setSuccess("Usuario creado correctamente 🎉");
+      setSuccess("Usuario creado correctamente");
 
       setTimeout(()=>{
         window.location="/";
@@ -67,13 +86,13 @@ export default function Register(){
         setError("Este correo ya está registrado");
         break;
       case "auth/invalid-email":
-        setError("Correo inválido");
+        setError("Correo invalido");
         break;
       case "auth/weak-password":
-        setError("Contraseña muy débil");
+        setError("La contraseña no cumple con las reglas de seguridad");
         break;
       default:
-        setError("Error inesperado");
+        setError("No se pudo completar el registro");
     }
   };
 
@@ -90,9 +109,11 @@ export default function Register(){
         <form onSubmit={registrar}>
 
           <input
+            type="email"
             placeholder="Correo"
             value={correo}
             onChange={e=>setCorreo(e.target.value)}
+            autoComplete="email"
           />
 
           <input
@@ -100,6 +121,7 @@ export default function Register(){
             placeholder="Contraseña"
             value={password}
             onChange={e=>setPassword(e.target.value)}
+            autoComplete="new-password"
           />
 
           <input
@@ -107,6 +129,7 @@ export default function Register(){
             placeholder="Confirmar contraseña"
             value={confirm}
             onChange={e=>setConfirm(e.target.value)}
+            autoComplete="new-password"
           />
 
           <button>Registrar</button>
